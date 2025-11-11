@@ -257,7 +257,28 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    // --- Firebase (CDN) ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAPTUZcAbXKLhRQ_qHBu0_VjWBwPGwV3KY",
+      authDomain: "geodesarrollo-71413.firebaseapp.com",
+      projectId: "geodesarrollo-71413",
+      storageBucket: "geodesarrollo-71413.firebasestorage.app",
+      messagingSenderId: "396587861660",
+      appId: "1:396587861660:web:c6c8951cd5c849c06f4f59"
+    };
+
+    const firebaseApp = initializeApp(firebaseConfig);
+    // You'll use these soon:
+    const db = getFirestore(firebaseApp);
+    const auth = getAuth(firebaseApp);
+    // --- end Firebase ---
+
+
     // ====== DATA & STORAGE ======
     const STORAGE_KEY = "gestion-idmas-vanilla";
     const defaultData = {
