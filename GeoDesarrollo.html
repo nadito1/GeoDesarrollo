@@ -257,11 +257,29 @@
     </div>
   </div>
 
-  <script>
-    // ====== DATA & STORAGE ======
-    const STORAGE_KEY = "gestion-idmas-vanilla";
+  <script type="module">
+    // --- Firebase via CDN (Modular SDK) ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import {
+      getFirestore, collection, doc, getDocs, setDoc, addDoc, updateDoc,
+      onSnapshot, query, orderBy
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAPTUZcAbXKLhRQ_qHBu0_VjWBwPGwV3KY",
+      authDomain: "geodesarrollo-71413.firebaseapp.com",
+      projectId: "geodesarrollo-71413",
+      storageBucket: "geodesarrollo-71413.firebasestorage.app",
+      messagingSenderId: "396587861660",
+      appId: "1:396587861660:web:c6c8951cd5c849c06f4f59"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    // --- end Firebase ---
+
+    // ====== DEFAULT DATA (for one-time seeding if collections are empty) ======
     const defaultData = {
-      currentUser: { id: "u1", nombre: "Admin I+D", rol: "Administrador" },
+      currentUser: { id: "u1", nombre: "Admin I+D", rol: "Administrador", email: "admin@empresa.com" },
       users: [
         { id: "u1", nombre: "Admin I+D", rol: "Administrador", email: "admin@empresa.com" },
         { id: "u2", nombre: "Carla Innovación", rol: "Líder de proyecto", email: "carla@empresa.com" },
@@ -337,34 +355,113 @@
       ],
     };
 
-    function loadData() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
-        return structuredClone(defaultData);
-      }
-      try {
-        return JSON.parse(raw);
-      } catch (e) {
-        return structuredClone(defaultData);
-      }
-    }
-    function saveData(data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-
-    let state = loadData();
+    // ====== APP STATE (in-memory, source of truth is Firestore) ======
+    let state = {
+      currentUser: { id: "u1", nombre: "Admin I+D", rol: "Administrador", email: "admin@empresa.com" },
+      users: [],
+      projects: [],
+      tasks: [],
+      documents: []
+    };
 
     // ====== UTILS ======
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => document.querySelectorAll(sel);
-    const uuid = () => "id-" + Math.random().toString(36).slice(2,9);
 
     function setRoute(route) {
       window.location.hash = "#" + route;
     }
 
-    // ====== RENDER FUNCTIONS ======
+    // helpers de nombres
+    function resolveUserName(id) {
+      if (!id) return "—";
+      const u = state.users.find(u => u.id === id);
+      return u ? u.nombre : id;
+    }
+    function resolveProjectName(id) {
+      if (!id) return "—";
+      const p = state.projects.find(p => p.id === id);
+      return p ? p.nombre : id;
+    }
+
+    // ====== FIRESTORE SYNC ======
+    async function seedIfEmpty() {
+      // If users collection is empty, assume first run and seed all collections
+      const usersSnap = await getDocs(collection(db, "users"));
+      if (usersSnap.empty) {
+        // Seed users
+        for (const u of defaultData.users) {
+          await setDoc(doc(db, "users", u.id), u);
+        }
+        // Seed projects
+        for (const p of defaultData.projects) {
+          await setDoc(doc(db, "projects", p.id), p);
+        }
+        // Seed tasks
+        for (const t of defaultData.tasks) {
+          await setDoc(doc(db, "tasks", t.id), t);
+        }
+        // Seed documents
+        for (const d of defaultData.documents) {
+          await setDoc(doc(db, "documents", d.id), d);
+        }
+        // Seed currentUser (optional doc)
+        await setDoc(doc(db, "meta", "currentUser"), defaultData.currentUser);
+      }
+    }
+
+    function subscribeCollections() {
+      // Users
+      onSnapshot(collection(db, "users"), (snap) => {
+        state.users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Also update topbar user from meta if present
+        renderIfReady();
+      });
+      // Projects
+      onSnapshot(collection(db, "projects"), (snap) => {
+        state.projects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderIfReady();
+      });
+      // Tasks
+      onSnapshot(collection(db, "tasks"), (snap) => {
+        state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderIfReady();
+      });
+      // Documents
+      onSnapshot(collection(db, "documents"), (snap) => {
+        state.documents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderIfReady();
+      });
+      // Current user (optional)
+      onSnapshot(doc(db, "meta", "currentUser"), (d) => {
+        if (d.exists()) state.currentUser = { id: d.id, ...d.data() };
+        renderTopbarUser();
+      });
+    }
+
+    let firstRenderDone = false;
+    function renderIfReady() {
+      // Wait until at least users+projects+tasks are fetched once (length >= 0 always true,
+      // but we want to avoid multiple early renders before DOM is ready)
+      if (!firstRenderDone) {
+        firstRenderDone = true;
+        render();
+      } else {
+        // Update visible view without destroying listeners
+        const hash = window.location.hash.replace("#", "") || "dashboard";
+        const content = $("#content");
+        if (hash === "dashboard") content.innerHTML = renderDashboard();
+        else if (hash === "proyectos") content.innerHTML = renderProyectos();
+        else if (hash === "tareas") content.innerHTML = renderTareas();
+        else if (hash === "kanban") content.innerHTML = renderKanban();
+        else if (hash === "documentos") content.innerHTML = renderDocumentos();
+        else if (hash === "usuarios") content.innerHTML = renderUsuarios();
+        else if (hash === "reportes") content.innerHTML = renderReportes();
+        attachEvents(hash);
+      }
+    }
+
+    // ====== RENDER FUNCTIONS (copiadas de tu archivo y no cambian UI) ======
     function render() {
       const hash = window.location.hash.replace("#", "") || "dashboard";
       // activar menu
@@ -812,15 +909,14 @@
         `).join("");
     }
 
-    // ====== ATTACH EVENTS ======
+    // ====== EVENTS (now talk to Firestore) ======
     function attachEvents(route) {
       if (route === "proyectos") {
         const form = $("#form-proyecto");
-        form.addEventListener("submit", (e) => {
+        form.addEventListener("submit", async (e) => {
           e.preventDefault();
           const fd = new FormData(form);
           const proj = {
-            id: "p" + Date.now(),
             nombre: fd.get("nombre"),
             codigo: fd.get("codigo"),
             objetivo: fd.get("objetivo"),
@@ -832,28 +928,21 @@
             tags: fd.get("tags") ? fd.get("tags").split(",").map(t=>t.trim()).filter(Boolean) : [],
             hitos: [],
           };
-          state.projects.push(proj);
-          saveData(state);
-          render();
+          await addDoc(collection(db, "projects"), proj);
+          form.reset();
         });
         $$("[data-archivar]").forEach(btn => {
-          btn.addEventListener("click", () => {
+          btn.addEventListener("click", async () => {
             const id = btn.getAttribute("data-archivar");
-            const p = state.projects.find(p => p.id === id);
-            if (p) {
-              p.estado = "archivado";
-              saveData(state);
-              render();
-            }
+            await updateDoc(doc(db, "projects", id), { estado: "archivado" });
           });
         });
       }
       if (route === "tareas") {
-        $("#form-tarea").addEventListener("submit", (e) => {
+        $("#form-tarea").addEventListener("submit", async (e) => {
           e.preventDefault();
           const fd = new FormData(e.target);
           const tarea = {
-            id: "t" + Date.now(),
             titulo: fd.get("titulo"),
             proyectoId: fd.get("proyectoId"),
             estado: fd.get("estado"),
@@ -862,19 +951,13 @@
             fechaLimite: fd.get("fechaLimite"),
             comentarios: [],
           };
-          state.tasks.push(tarea);
-          saveData(state);
-          render();
+          await addDoc(collection(db, "tasks"), tarea);
+          e.target.reset();
         });
         $$("[data-tarea-estado]").forEach(sel => {
-          sel.addEventListener("change", () => {
+          sel.addEventListener("change", async () => {
             const id = sel.getAttribute("data-tarea-estado");
-            const t = state.tasks.find(t => t.id === id);
-            if (t) {
-              t.estado = sel.value;
-              saveData(state);
-              // no re-render completo, solo badge
-            }
+            await updateDoc(doc(db, "tasks", id), { estado: sel.value });
           });
         });
       }
@@ -887,47 +970,38 @@
         });
         $$("[data-kanban]").forEach(col => {
           col.addEventListener("dragover", (e) => e.preventDefault());
-          col.addEventListener("drop", (e) => {
+          col.addEventListener("drop", async (e) => {
             e.preventDefault();
             const taskId = e.dataTransfer.getData("text/plain");
-            const t = state.tasks.find(t => t.id === taskId);
-            if (t) {
-              t.estado = col.getAttribute("data-kanban");
-              saveData(state);
-              render();
-            }
+            await updateDoc(doc(db, "tasks", taskId), { estado: col.getAttribute("data-kanban") });
           });
         });
       }
       if (route === "documentos") {
-        $("#form-doc").addEventListener("submit", (e) => {
+        $("#form-doc").addEventListener("submit", async (e) => {
           e.preventDefault();
           const fd = new FormData(e.target);
-          const doc = {
-            id: "d" + Date.now(),
+          const docu = {
             nombre: fd.get("nombre"),
             tipo: fd.get("tipo"),
             proyectoId: fd.get("proyectoId"),
             fecha: new Date().toISOString().slice(0,10),
           };
-          state.documents.push(doc);
-          saveData(state);
-          render();
+          await addDoc(collection(db, "documents"), docu);
+          e.target.reset();
         });
       }
       if (route === "usuarios") {
-        $("#form-user").addEventListener("submit", (e) => {
+        $("#form-user").addEventListener("submit", async (e) => {
           e.preventDefault();
           const fd = new FormData(e.target);
           const user = {
-            id: "u" + Date.now(),
             nombre: fd.get("nombre"),
             email: fd.get("email"),
             rol: fd.get("rol"),
           };
-          state.users.push(user);
-          saveData(state);
-          render();
+          await addDoc(collection(db, "users"), user);
+          e.target.reset();
         });
       }
       if (route === "reportes") {
@@ -956,27 +1030,24 @@
       }
     }
 
-    // helpers de nombres
-    function resolveUserName(id) {
-      if (!id) return "—";
-      const u = state.users.find(u => u.id === id);
-      return u ? u.nombre : id;
+    // ====== INIT ======
+    async function init() {
+      await seedIfEmpty();
+      subscribeCollections();
+
+      // user info en topbar
+      renderTopbarUser();
+
+      // route
+      window.addEventListener("hashchange", render);
+      render();
     }
-    function resolveProjectName(id) {
-      if (!id) return "—";
-      const p = state.projects.find(p => p.id === id);
-      return p ? p.nombre : id;
+
+    function renderTopbarUser() {
+      $("#user-name").textContent = state.currentUser?.nombre || "Admin I+D";
+      $("#user-role").textContent = state.currentUser?.rol || "Administrador";
+      $("#user-avatar").textContent = (state.currentUser?.nombre || "I").charAt(0);
     }
 
-    // init
-    window.addEventListener("hashchange", render);
-    // user info en topbar
-    $("#user-name").textContent = state.currentUser.nombre;
-    $("#user-role").textContent = state.currentUser.rol;
-    $("#user-avatar").textContent = state.currentUser.nombre.charAt(0);
-
-    render();
-  </script>
-</body>
-</html>
-
+    init();
+  </script></body></html>
