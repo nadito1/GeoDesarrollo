@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestión I+D+</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #eef2f7;
+      --surface: #ffffff;
+      --border: #d1d9e6;
+      --text: #0f172a;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --danger: #ef4444;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+    }
+    .app {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+    }
+    .sidebar {
+      width: 210px;
+      background: #020617;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 16px 16px 12px;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-nav {
+      padding: 8px;
+      flex: 1;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: background 0.1s;
+      color: inherit;
+      text-decoration: none;
+    }
+    .nav-item.active, .nav-item:hover {
+      background: rgba(148, 163, 184, 0.12);
+    }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .topbar {
+      height: 52px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+    .topbar-title { font-weight: 600; }
+    .topbar-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .page-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .page-sub {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 14px;
+    }
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 1px rgba(15,23,42,0.02);
+      padding: 14px;
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+    .muted { color: var(--muted); font-size: 0.75rem; }
+    .stat-number { font-size: 2.1rem; font-weight: 600; }
+    .input, select, textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 0.78rem;
+      outline: none;
+    }
+    .input:focus, select:focus, textarea:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.3);
+    }
+    label {
+      font-size: 0.69rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+      display: inline-block;
+    }
+    .btn {
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      color: #0f172a;
+    }
+    .badge {
+      background: #e2e8f0;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.6rem;
+      display: inline-block;
+    }
+    .list-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 6px 0;
+      gap: 8px;
+    }
+    .list-row:last-child { border-bottom: none; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 14px;
+    }
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .kanban-column {
+      background: #e2e8f0;
+      padding: 8px;
+      border-radius: 12px;
+      min-height: 200px;
+    }
+    .kanban-title { font-weight: 600; font-size: 0.75rem; margin-bottom: 8px; }
+    .kanban-task {
+      background: #fff;
+      border-radius: 8px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      font-size: 0.75rem;
+      cursor: grab;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      font-size: 0.72rem;
+      text-align: left;
+      padding: 6px 4px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th { color: #94a3b8; font-weight: 500; }
+    @media (max-width: 850px) {
+      .sidebar { display: none; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span style="font-size:16px;">⚗️ Gestión I+D+</span>
+      </div>
+      <nav class="sidebar-nav" id="nav">
+        <a href="#dashboard" class="nav-item" data-route="dashboard">📊 Dashboard</a>
+        <a href="#proyectos" class="nav-item" data-route="proyectos">🧪 Proyectos</a>
+        <a href="#tareas" class="nav-item" data-route="tareas">✅ Tareas</a>
+        <a href="#kanban" class="nav-item" data-route="kanban">🗂️ Kanban</a>
+        <a href="#documentos" class="nav-item" data-route="documentos">📁 Documentos</a>
+        <a href="#usuarios" class="nav-item" data-route="usuarios">👥 Usuarios</a>
+        <a href="#reportes" class="nav-item" data-route="reportes">📑 Reportes</a>
+      </nav>
+      <div style="padding:10px 14px;font-size:0.6rem;color:#94a3b8;border-top:1px solid rgba(148,163,184,0.12)">
+        localStorage – sin internet
+      </div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-user" id="topbar-user">
+          <div class="avatar" id="user-avatar">I</div>
+          <div style="line-height:1;">
+            <div style="font-size:0.7rem;font-weight:500" id="user-name">Admin I+D</div>
+            <div style="font-size:0.6rem;color:#94a3b8" id="user-role">Administrador</div>
+          </div>
+        </div>
+      </header>
+      <main class="content" id="content">
+        <!-- acá renderizamos -->
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // ====== DATA & STORAGE ======
+    const STORAGE_KEY = "gestion-idmas-vanilla";
+    const defaultData = {
+      currentUser: { id: "u1", nombre: "Admin I+D", rol: "Administrador" },
+      users: [
+        { id: "u1", nombre: "Admin I+D", rol: "Administrador", email: "admin@empresa.com" },
+        { id: "u2", nombre: "Carla Innovación", rol: "Líder de proyecto", email: "carla@empresa.com" },
+        { id: "u3", nombre: "Tomás Planta Pilar", rol: "Colaborador", email: "tomas@empresa.com" },
+        { id: "u4", nombre: "Lucía QA", rol: "Colaborador", email: "lucia@empresa.com" },
+      ],
+      projects: [
+        {
+          id: "p1",
+          nombre: "Reformulación barra proteica",
+          codigo: "ID-2025-001",
+          objetivo: "Mejorar textura y shelf-life",
+          fechaInicio: "2025-10-01",
+          fechaFin: "2026-01-30",
+          responsable: "u2",
+          equipo: ["u2","u3","u4"],
+          estado: "en curso",
+          tags: ["reformulación","planta Pilar"],
+          hitos: [
+            { id: "h1", nombre: "Desarrollo laboratorio", responsable: "u2", fecha: "2025-11-30" },
+            { id: "h2", nombre: "Prueba piloto", responsable: "u4", fecha: "2025-12-15" },
+          ],
+        },
+        {
+          id: "p2",
+          nombre: "Nuevo alfajor high-protein",
+          codigo: "ID-2025-002",
+          objetivo: "Lanzar SKU alto en proteína",
+          fechaInicio: "2025-09-10",
+          fechaFin: "2026-03-30",
+          responsable: "u1",
+          equipo: ["u1","u3"],
+          estado: "planificado",
+          tags: ["nuevo producto"],
+          hitos: [],
+        },
+      ],
+      tasks: [
+        {
+          id: "t1",
+          proyectoId: "p1",
+          titulo: "Ajustar formulación con nuevo estabilizante",
+          estado: "en progreso",
+          prioridad: "alta",
+          responsable: "u2",
+          fechaLimite: "2025-11-15",
+          comentarios: []
+        },
+        {
+          id: "t2",
+          proyectoId: "p1",
+          titulo: "Armar protocolo de prueba piloto",
+          estado: "pendiente",
+          prioridad: "media",
+          responsable: "u4",
+          fechaLimite: "2025-11-20",
+          comentarios: []
+        },
+        {
+          id: "t3",
+          proyectoId: "p2",
+          titulo: "Costear ingredientes",
+          estado: "pendiente",
+          prioridad: "baja",
+          responsable: "u3",
+          fechaLimite: "2025-11-10",
+          comentarios: []
+        },
+      ],
+      documents: [
+        { id: "d1", nombre: "Protocolo prueba piloto barra proteica", tipo: "protocolo", proyectoId: "p1", fecha: "2025-10-20" },
+        { id: "d2", nombre: "Especificación técnica alfajor HP", tipo: "análisis", proyectoId: "p2", fecha: "2025-10-10" },
+      ],
+    };
+
+    function loadData() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+        return structuredClone(defaultData);
+      }
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        return structuredClone(defaultData);
+      }
+    }
+    function saveData(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    let state = loadData();
+
+    // ====== UTILS ======
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+    const uuid = () => "id-" + Math.random().toString(36).slice(2,9);
+
+    function setRoute(route) {
+      window.location.hash = "#" + route;
+    }
+
+    // ====== RENDER FUNCTIONS ======
+    function render() {
+      const hash = window.location.hash.replace("#", "") || "dashboard";
+      // activar menu
+      $$("#nav .nav-item").forEach(a => {
+        a.classList.toggle("active", a.dataset.route === hash);
+      });
+      // topbar title
+      $("#topbar-title").textContent = {
+        dashboard: "Dashboard",
+        proyectos: "Gestión de proyectos",
+        tareas: "Gestión de tareas",
+        kanban: "Kanban",
+        documentos: "Gestión de documentos",
+        usuarios: "Panel de usuarios",
+        reportes: "Reportes y seguimiento",
+      }[hash] || "Gestión I+D+";
+
+      // render vista
+      const content = $("#content");
+      if (hash === "dashboard") content.innerHTML = renderDashboard();
+      else if (hash === "proyectos") content.innerHTML = renderProyectos();
+      else if (hash === "tareas") content.innerHTML = renderTareas();
+      else if (hash === "kanban") content.innerHTML = renderKanban();
+      else if (hash === "documentos") content.innerHTML = renderDocumentos();
+      else if (hash === "usuarios") content.innerHTML = renderUsuarios();
+      else if (hash === "reportes") content.innerHTML = renderReportes();
+      attachEvents(hash);
+    }
+
+    function renderDashboard() {
+      const activos = state.projects.filter(p => p.estado !== "finalizado" && p.estado !== "archivado").length;
+      const finalizados = state.projects.filter(p => p.estado === "finalizado").length;
+      const pendientes = state.projects.filter(p => p.estado === "planificado").length;
+
+      // tareas próximas
+      const proximas = [...state.tasks]
+        .filter(t => t.estado !== "completada")
+        .sort((a,b)=> (a.fechaLimite||"9999") > (b.fechaLimite||"9999") ? 1 : -1)
+        .slice(0,5);
+
+      // avance por proyecto
+      const avance = state.projects.map(p => {
+        const tareas = state.tasks.filter(t => t.proyectoId === p.id);
+        const done = tareas.filter(t => t.estado === "completada").length;
+        const pct = tareas.length ? Math.round((done / tareas.length) * 100) : 0;
+        return { ...p, avance: pct };
+      });
+
+      return `
+        <div>
+          <div class="page-title">Dashboard general</div>
+          <div class="page-sub">Visión rápida de los proyectos de desarrollo.</div>
+        </div>
+        <div class="grid grid-3" style="margin-bottom:14px;">
+          <div class="card">
+            <div class="muted">Proyectos activos</div>
+            <div class="stat-number">${activos}</div>
+            <div class="muted">En curso o validación</div>
+          </div>
+          <div class="card">
+            <div class="muted">Finalizados</div>
+            <div class="stat-number">${finalizados}</div>
+            <div class="muted">Cerrados</div>
+          </div>
+          <div class="card">
+            <div class="muted">Planificados/pendientes</div>
+            <div class="stat-number">${pendientes}</div>
+            <div class="muted">A la espera</div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Avance por proyecto</div>
+            ${avance.map(p => `
+              <div style="margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;">
+                  <span>${p.nombre}</span>
+                  <span class="muted">${p.avance}%</span>
+                </div>
+                <div style="background:#e2e8f0;border-radius:9999px;height:6px;overflow:hidden;">
+                  <div style="background:#2563eb;width:${p.avance}%;height:6px;"></div>
+                </div>
+              </div>
+            `).join("")}
+            ${avance.length === 0 ? `<div class="muted">No hay proyectos aún.</div>` : ""}
+          </div>
+          <div class="card">
+            <div class="card-title">Tareas próximas al vencimiento</div>
+            ${proximas.length === 0 ? `<div class="muted">No hay tareas próximas.</div>` : ""}
+            ${proximas.map(t => `
+              <div class="list-row">
+                <div>
+                  <div style="font-size:0.75rem;font-weight:500">${t.titulo}</div>
+                  <div class="muted">${t.fechaLimite || "Sin fecha"}</div>
+                </div>
+                <div><span class="badge" style="background:${t.prioridad==="alta"?"#fee2e2":"#dbeafe"}">${t.prioridad}</span></div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderProyectos() {
+      return `
+        <div class="page-title">Gestión de proyectos</div>
+        <div class="page-sub">Alta, edición y seguimiento.</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Nuevo proyecto</div>
+          <form id="form-proyecto" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px;">
+            <div>
+              <label>Nombre del proyecto</label>
+              <input class="input" name="nombre" required />
+            </div>
+            <div>
+              <label>Código interno</label>
+              <input class="input" name="codigo" />
+            </div>
+            <div>
+              <label>Responsable</label>
+              <select name="responsable" class="input">
+                <option value="">--</option>
+                ${state.users.map(u=>`<option value="${u.id}">${u.nombre}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label>Estado</label>
+              <select name="estado" class="input">
+                <option value="planificado">Planificado</option>
+                <option value="en curso">En curso</option>
+                <option value="validación">Validación</option>
+                <option value="finalizado">Finalizado</option>
+              </select>
+            </div>
+            <div>
+              <label>Fecha inicio</label>
+              <input type="date" class="input" name="fechaInicio" />
+            </div>
+            <div>
+              <label>Fecha fin</label>
+              <input type="date" class="input" name="fechaFin" />
+            </div>
+            <div style="grid-column:1/-1;">
+              <label>Objetivo</label>
+              <textarea class="input" rows="2" name="objetivo"></textarea>
+            </div>
+            <div style="grid-column:1/-1;">
+              <label>Tags (separados por coma)</label>
+              <input class="input" name="tags" />
+            </div>
+            <div style="grid-column:1/-1;">
+              <button class="btn" type="submit">Guardar proyecto</button>
+            </div>
+          </form>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:12px;">
+          ${state.projects.map(p => `
+            <div class="card">
+              <div class="card-title">${p.nombre}</div>
+              <div class="muted">${p.objetivo || "Sin objetivo"}</div>
+              <div style="margin:6px 0;font-size:0.7rem;">
+                <strong>Código:</strong> ${p.codigo || "-"}<br>
+                <strong>Estado:</strong> ${p.estado}<br>
+                <strong>Responsable:</strong> ${resolveUserName(p.responsable)}
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
+                ${(p.tags||[]).map(t=>`<span class="badge">${t}</span>`).join("")}
+              </div>
+              <button class="btn-secondary" data-archivar="${p.id}" style="font-size:0.65rem;">Archivar</button>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderTareas() {
+      return `
+        <div class="page-title">Gestión de tareas</div>
+        <div class="page-sub">Tareas vinculadas a proyectos y hitos.</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Nueva tarea</div>
+          <form id="form-tarea" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px;">
+            <div style="grid-column:1/-1;">
+              <label>Título</label>
+              <input class="input" name="titulo" required />
+            </div>
+            <div>
+              <label>Proyecto</label>
+              <select class="input" name="proyectoId" required>
+                <option value="">--</option>
+                ${state.projects.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label>Responsable</label>
+              <select class="input" name="responsable">
+                <option value="">--</option>
+                ${state.users.map(u=>`<option value="${u.id}">${u.nombre}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label>Fecha límite</label>
+              <input type="date" class="input" name="fechaLimite" />
+            </div>
+            <div>
+              <label>Estado</label>
+              <select class="input" name="estado">
+                <option value="pendiente">Pendiente</option>
+                <option value="en progreso">En progreso</option>
+                <option value="completada">Completada</option>
+                <option value="bloqueada">Bloqueada</option>
+              </select>
+            </div>
+            <div>
+              <label>Prioridad</label>
+              <select class="input" name="prioridad">
+                <option value="baja">Baja</option>
+                <option value="media" selected>Media</option>
+                <option value="alta">Alta</option>
+              </select>
+            </div>
+            <div style="grid-column:1/-1;">
+              <button class="btn" type="submit">Guardar tarea</button>
+            </div>
+          </form>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+          ${state.tasks.map(t => `
+            <div class="card">
+              <div class="card-title" style="display:flex;justify-content:space-between;gap:6px;">
+                <span>${t.titulo}</span>
+                <span class="badge">${t.estado}</span>
+              </div>
+              <div class="muted" style="margin-bottom:4px;">${resolveProjectName(t.proyectoId)}</div>
+              <div style="font-size:0.68rem;">
+                <strong>Resp:</strong> ${resolveUserName(t.responsable)}<br>
+                <strong>Vence:</strong> ${t.fechaLimite || "-"}<br>
+                <strong>Prioridad:</strong> ${t.prioridad}
+              </div>
+              <div style="margin-top:6px;">
+                <label style="display:block;margin-bottom:3px;">Actualizar estado</label>
+                <select class="input" data-tarea-estado="${t.id}">
+                  <option value="pendiente" ${t.estado==="pendiente"?"selected":""}>Pendiente</option>
+                  <option value="en progreso" ${t.estado==="en progreso"?"selected":""}>En progreso</option>
+                  <option value="completada" ${t.estado==="completada"?"selected":""}>Completada</option>
+                  <option value="bloqueada" ${t.estado==="bloqueada"?"selected":""}>Bloqueada</option>
+                </select>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderKanban() {
+      const columns = [
+        { id: "pendiente", title: "Pendiente" },
+        { id: "en progreso", title: "En progreso" },
+        { id: "bloqueada", title: "Bloqueada" },
+        { id: "completada", title: "Completada" },
+      ];
+      return `
+        <div class="page-title">Kanban de tareas</div>
+        <div class="page-sub">Arrastrá y soltá para cambiar de estado.</div>
+        <div class="kanban">
+          ${columns.map(col => `
+            <div class="kanban-column" data-kanban="${col.id}">
+              <div class="kanban-title">${col.title}</div>
+              ${state.tasks.filter(t => t.estado === col.id).map(t => `
+                <div class="kanban-task" draggable="true" data-task="${t.id}">
+                  <div>${t.titulo}</div>
+                  <div class="muted" style="font-size:0.6rem;">${resolveProjectName(t.proyectoId)}</div>
+                </div>
+              `).join("")}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderDocumentos() {
+      return `
+        <div class="page-title">Gestión de documentos</div>
+        <div class="page-sub">Subí o vinculá documentos técnicos (simulado).</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Nuevo documento</div>
+          <form id="form-doc" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px;">
+            <div style="grid-column:1/-1;">
+              <label>Nombre</label>
+              <input class="input" name="nombre" required />
+            </div>
+            <div>
+              <label>Tipo</label>
+              <select class="input" name="tipo">
+                <option value="análisis">Análisis</option>
+                <option value="protocolo">Protocolo</option>
+                <option value="reporte">Reporte</option>
+                <option value="imagen">Imagen</option>
+              </select>
+            </div>
+            <div>
+              <label>Proyecto</label>
+              <select class="input" name="proyectoId">
+                <option value="">General</option>
+                ${state.projects.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join("")}
+              </select>
+            </div>
+            <div style="grid-column:1/-1;">
+              <button class="btn" type="submit">Guardar documento</button>
+            </div>
+          </form>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:12px;">
+          ${state.documents.map(d => `
+            <div class="card">
+              <div class="card-title">${d.nombre}</div>
+              <div class="muted">${d.tipo}</div>
+              <div style="font-size:0.65rem;margin-top:5px;">
+                <strong>Proyecto:</strong> ${d.proyectoId ? resolveProjectName(d.proyectoId) : "General"}<br>
+                <strong>Fecha:</strong> ${d.fecha}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderUsuarios() {
+      return `
+        <div class="page-title">Panel de usuarios</div>
+        <div class="page-sub">Roles: Administrador, Líder de proyecto, Colaborador.</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Nuevo miembro</div>
+          <form id="form-user" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
+            <div>
+              <label>Nombre</label>
+              <input class="input" name="nombre" required />
+            </div>
+            <div>
+              <label>Email</label>
+              <input class="input" name="email" type="email" />
+            </div>
+            <div>
+              <label>Rol</label>
+              <select name="rol" class="input">
+                <option value="Administrador">Administrador</option>
+                <option value="Líder de proyecto">Líder de proyecto</option>
+                <option value="Colaborador">Colaborador</option>
+              </select>
+            </div>
+            <div style="grid-column:1/-1;">
+              <button class="btn" type="submit">Agregar</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title">Equipo</div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${state.users.map(u => `
+                  <tr>
+                    <td>${u.nombre}</td>
+                    <td>${u.email || "-"}</td>
+                    <td><span class="badge">${u.rol}</span></td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderReportes() {
+      return `
+        <div class="page-title">Reportes y seguimiento</div>
+        <div class="page-sub">Filtrá por responsable y estado.</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Filtros</div>
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px;">
+            <div>
+              <label>Responsable</label>
+              <select class="input" id="f-responsable">
+                <option value="">Todos</option>
+                ${state.users.map(u=>`<option value="${u.id}">${u.nombre}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label>Estado tarea</label>
+              <select class="input" id="f-estado">
+                <option value="">Todos</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="en progreso">En progreso</option>
+                <option value="completada">Completada</option>
+                <option value="bloqueada">Bloqueada</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;">
+              <button class="btn" id="btn-export">Exportar (JSON)</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Resultado</div>
+          <div style="overflow-x:auto;">
+            <table id="tabla-reportes">
+              <thead>
+                <tr>
+                  <th>Tarea</th>
+                  <th>Proyecto</th>
+                  <th>Responsable</th>
+                  <th>Estado</th>
+                  <th>Vence</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${renderReportRows()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderReportRows(filtroResp = "", filtroEstado = "") {
+      return state.tasks
+        .filter(t => (filtroResp ? t.responsable === filtroResp : true))
+        .filter(t => (filtroEstado ? t.estado === filtroEstado : true))
+        .map(t => `
+          <tr>
+            <td>${t.titulo}</td>
+            <td>${resolveProjectName(t.proyectoId)}</td>
+            <td>${resolveUserName(t.responsable)}</td>
+            <td>${t.estado}</td>
+            <td>${t.fechaLimite || "-"}</td>
+          </tr>
+        `).join("");
+    }
+
+    // ====== ATTACH EVENTS ======
+    function attachEvents(route) {
+      if (route === "proyectos") {
+        const form = $("#form-proyecto");
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const fd = new FormData(form);
+          const proj = {
+            id: "p" + Date.now(),
+            nombre: fd.get("nombre"),
+            codigo: fd.get("codigo"),
+            objetivo: fd.get("objetivo"),
+            fechaInicio: fd.get("fechaInicio"),
+            fechaFin: fd.get("fechaFin"),
+            responsable: fd.get("responsable"),
+            equipo: fd.get("responsable") ? [fd.get("responsable")] : [],
+            estado: fd.get("estado"),
+            tags: fd.get("tags") ? fd.get("tags").split(",").map(t=>t.trim()).filter(Boolean) : [],
+            hitos: [],
+          };
+          state.projects.push(proj);
+          saveData(state);
+          render();
+        });
+        $$("[data-archivar]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-archivar");
+            const p = state.projects.find(p => p.id === id);
+            if (p) {
+              p.estado = "archivado";
+              saveData(state);
+              render();
+            }
+          });
+        });
+      }
+      if (route === "tareas") {
+        $("#form-tarea").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const tarea = {
+            id: "t" + Date.now(),
+            titulo: fd.get("titulo"),
+            proyectoId: fd.get("proyectoId"),
+            estado: fd.get("estado"),
+            prioridad: fd.get("prioridad"),
+            responsable: fd.get("responsable"),
+            fechaLimite: fd.get("fechaLimite"),
+            comentarios: [],
+          };
+          state.tasks.push(tarea);
+          saveData(state);
+          render();
+        });
+        $$("[data-tarea-estado]").forEach(sel => {
+          sel.addEventListener("change", () => {
+            const id = sel.getAttribute("data-tarea-estado");
+            const t = state.tasks.find(t => t.id === id);
+            if (t) {
+              t.estado = sel.value;
+              saveData(state);
+              // no re-render completo, solo badge
+            }
+          });
+        });
+      }
+      if (route === "kanban") {
+        // drag & drop
+        $$("[data-task]").forEach(el => {
+          el.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", el.getAttribute("data-task"));
+          });
+        });
+        $$("[data-kanban]").forEach(col => {
+          col.addEventListener("dragover", (e) => e.preventDefault());
+          col.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const taskId = e.dataTransfer.getData("text/plain");
+            const t = state.tasks.find(t => t.id === taskId);
+            if (t) {
+              t.estado = col.getAttribute("data-kanban");
+              saveData(state);
+              render();
+            }
+          });
+        });
+      }
+      if (route === "documentos") {
+        $("#form-doc").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const doc = {
+            id: "d" + Date.now(),
+            nombre: fd.get("nombre"),
+            tipo: fd.get("tipo"),
+            proyectoId: fd.get("proyectoId"),
+            fecha: new Date().toISOString().slice(0,10),
+          };
+          state.documents.push(doc);
+          saveData(state);
+          render();
+        });
+      }
+      if (route === "usuarios") {
+        $("#form-user").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const user = {
+            id: "u" + Date.now(),
+            nombre: fd.get("nombre"),
+            email: fd.get("email"),
+            rol: fd.get("rol"),
+          };
+          state.users.push(user);
+          saveData(state);
+          render();
+        });
+      }
+      if (route === "reportes") {
+        const fr = $("#f-responsable");
+        const fe = $("#f-estado");
+        const tbody = $("#tabla-reportes tbody");
+        function apply() {
+          tbody.innerHTML = renderReportRows(fr.value, fe.value);
+        }
+        fr.addEventListener("change", apply);
+        fe.addEventListener("change", apply);
+        $("#btn-export").addEventListener("click", () => {
+          const data = {
+            filtros: { responsable: fr.value, estado: fe.value },
+            tareas: state.tasks,
+            proyectos: state.projects,
+          };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "reporte-gestion-idmas.json";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      }
+    }
+
+    // helpers de nombres
+    function resolveUserName(id) {
+      if (!id) return "—";
+      const u = state.users.find(u => u.id === id);
+      return u ? u.nombre : id;
+    }
+    function resolveProjectName(id) {
+      if (!id) return "—";
+      const p = state.projects.find(p => p.id === id);
+      return p ? p.nombre : id;
+    }
+
+    // init
+    window.addEventListener("hashchange", render);
+    // user info en topbar
+    $("#user-name").textContent = state.currentUser.nombre;
+    $("#user-role").textContent = state.currentUser.rol;
+    $("#user-avatar").textContent = state.currentUser.nombre.charAt(0);
+
+    render();
+  </script>
+</body>
+</html>
+
